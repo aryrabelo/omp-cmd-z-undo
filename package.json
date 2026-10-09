@@ -1,0 +1,24 @@
+{
+	"name": "@aryrabelo/omp-cmd-z-undo",
+	"version": "0.1.0",
+	"description": "OMP extension: Ctrl+Z (and Cmd+Z, when the terminal delivers it) undoes typing in the prompt composer instead of suspending the process.",
+	"type": "module",
+	"license": "MIT",
+	"author": "Ary Rabelo",
+	"files": ["src", "README.md", "LICENSE"],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/aryrabelo/omp-cmd-z-undo.git"
+	},
+	"homepage": "https://github.com/aryrabelo/omp-cmd-z-undo#readme",
+	"keywords": ["omp", "oh-my-pi", "pi", "extension", "undo", "keybindings", "coding-agent"],
+	"omp": {
+		"extensions": ["./src/cmd-z-undo.ts"]
+	},
+	"engines": {
+		"bun": ">=1.3.14"
+	},
+	"scripts": {
+		"test": "bun tests/cmd-z-undo-check.ts"
+	}
+}
