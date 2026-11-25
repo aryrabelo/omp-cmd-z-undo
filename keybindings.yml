@@ -1,0 +1,7 @@
+# Ctrl+Z (and Cmd+Z, when the terminal sends it) undoes typing in the omp
+# prompt composer instead of suspending the process.
+#
+# Merge these two entries into ~/.omp/agent/keybindings.yml.
+# Ctrl+- and Ctrl+_ are omp's default undo keys; keep them.
+app.suspend: []
+tui.editor.undo: [Ctrl+-, Ctrl+_, Ctrl+Z, Super+Z]

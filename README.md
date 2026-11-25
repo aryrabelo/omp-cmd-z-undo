@@ -1,36 +1,44 @@
 # omp-cmd-z-undo
 
-An [oh-my-pi (omp)](https://github.com/can1357/oh-my-pi) extension that makes
-**Ctrl+Z undo what you typed in the prompt composer** instead of suspending the
-process. **Cmd+Z** works too, when your terminal delivers it.
+Make **Ctrl+Z undo what you typed in the [oh-my-pi (omp)](https://github.com/can1357/oh-my-pi)
+prompt composer** instead of suspending the process. **Cmd+Z** works too, when
+your terminal delivers it.
 
-omp already has an undo stack in its editor, bound to `ctrl+-` / `ctrl+_`.
-`ctrl+z` goes to `app.suspend`. This extension changes only that routing:
-
-- adds `ctrl+z` and `super+z` to `tui.editor.undo`;
-- removes `ctrl+z` from the composer actions that claimed it (`app.suspend` by
-  default, or whatever you remapped it to);
-- changes the keybindings **in memory**. It never writes `keybindings.yml`;
-- lets the editor's own undo do the work. It keeps no second text stack and
-  touches no private fields.
-
-It does nothing outside the interactive TUI (print, RPC, ACP, subagents).
+Since omp 19.2.0 this is two lines of `keybindings.yml`, not an extension.
 
 ## Install
 
-```sh
-omp plugin install github:aryrabelo/omp-cmd-z-undo
+Merge [`keybindings.yml`](keybindings.yml) into `~/.omp/agent/keybindings.yml`:
+
+```yaml
+app.suspend: []
+tui.editor.undo: [Ctrl+-, Ctrl+_, Ctrl+Z, Super+Z]
 ```
 
-Or link the single file into your extensions directory:
+- `app.suspend: []` frees Ctrl+Z; omp no longer suspends to the shell.
+- `tui.editor.undo` keeps omp's default undo keys (`Ctrl+-`, `Ctrl+_`) and adds
+  Ctrl+Z and Cmd+Z. The editor's own undo does the work, with its own
+  granularity.
+- Named profiles load the default profile's `keybindings.yml` first and override
+  it action by action, so this file covers them unless a profile rebinds one of
+  these two actions.
+- If you bound Ctrl+Z to another `app.*` action, remove it there too: the
+  composer checks app actions before editor undo.
 
-```sh
-git clone https://github.com/aryrabelo/omp-cmd-z-undo
-ln -s "$PWD/omp-cmd-z-undo/src/cmd-z-undo.ts" ~/.omp/agent/extensions/cmd-z-undo.ts
-```
+## Why not an extension anymore
 
-Named profiles have their own base: also link into
-`~/.omp/profiles/<name>/agent/extensions/`.
+Versions up to 0.1.0 shipped an extension that swapped the editor through
+`ctx.ui.setEditorComponent`. omp 19.2.0 removed that API; the extension now
+fails to load with `ctx.ui.setEditorComponent is not a function`.
+
+Its replacement, `ctx.ui.composer.addKeyHandler`, cannot take Ctrl+Z: omp's own
+composer handler is registered first, matches `app.suspend` and suspends the
+process before extension handlers run. The handler also gets no way to call the
+editor's undo. Measured on omp 19.2.0 in a raw pty: a handler returning `true`
+for `ctrl+z` never received the key, and the process stopped.
+
+If you linked `src/cmd-z-undo.ts` into `~/.omp/agent/extensions/` (or a
+profile's), remove that link.
 
 ## Cmd+Z and your terminal
 
@@ -39,7 +47,7 @@ protocol), and many terminals keep the key for themselves. **Ghostty binds
 `super+z` to its own undo (reopen closed tab/split) by default**, so the key
 never arrives. The most portable fix is to make the terminal send the
 `Ctrl+_` byte, which is undo in omp, Claude Code, and zsh/readline alike, and
-works without the extension or Kitty protocol:
+works without Kitty protocol:
 
 ```
 # ~/.config/ghostty/config
@@ -50,24 +58,20 @@ The trade-off is losing Ghostty's own "undo close tab".
 
 ## Limits
 
-- No redo: omp's editor has no redo API.
-- Undo granularity is the editor's own.
-- `setEditorComponent` is a single slot. This extension wraps the factory that
-  was installed before it, but an extension loaded later that replaces the
-  editor without reading `getEditorComponent()` wins.
-- Keybindings are global per action name. If you had `ctrl+z` on
-  `app.tools.expand`, `app.editor.external` or `app.message.copy`, it is also
-  removed from the other surface that reuses that action.
-- Extensions run in-process with omp's privileges. Read the source (one file,
-  no dependencies) before installing.
+- No redo: omp's editor has no redo binding.
+- Ctrl+Z no longer suspends omp anywhere.
 
 The design notes, with sources, are in
 [`docs/research.pt-BR.md`](docs/research.pt-BR.md) (Portuguese).
 
 ## Test
 
+Needs `omp` on `PATH`. Runs omp in a pty with a throwaway agent directory,
+types, presses Ctrl+Z, and checks both the default (suspends) and this config
+(undoes, keeps running):
+
 ```sh
-bun tests/cmd-z-undo-check.ts
+python3 -I tests/ctrl-z-undo-e2e.py
 ```
 
 ## License
