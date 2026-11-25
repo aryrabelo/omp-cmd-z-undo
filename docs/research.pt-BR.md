@@ -1,5 +1,7 @@
 # Pesquisa: undo do composer do OMP
 
+> **Atualização (omp 19.2.0, 2026-11-25).** O omp 19.2.0 removeu `ctx.ui.setEditorComponent` e o `CustomEditor`; a extensão descrita abaixo deixou de carregar. A troca sugerida, `ctx.ui.composer.addKeyHandler`, não recebe `ctrl+z`: o handler do próprio composer é registrado antes, casa `app.suspend` e suspende o processo antes dos handlers de extensão (medido num pty: o handler devolvendo `true` para `ctrl+z` nunca viu a tecla, e o processo ficou em `T`). O wrapper também descarta o composer, então a extensão não teria como chamar o undo nativo. A solução virou configuração: `app.suspend: []` e `ctrl+z`/`super+z` em `tui.editor.undo`, em `keybindings.yml` (ver o README). O resto deste documento descreve o desenho antigo.
+
 **Escopo.** O objetivo é desfazer texto apagado enquanto o usuário edita o prompt interativo (composer), com `Ctrl+Z` e `Cmd+Z` (`super+z`). Isto não é undo de arquivo, worktree ou sessão. Também não é redo: o editor do OMP expõe o binding `tui.editor.undo`, mas não há binding ou API `redo` na superfície atual.
 
 ## Evidência oficial do runtime
